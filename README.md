@@ -9,7 +9,7 @@ Useful for uploading and deploying things via gulp-vsftp.
 ## Install
 
 ```bash
-$ npm install --save-dev gulp-vsftp
+$ npm install --save-dev https://github.com/felix307253927/gulp-vsftp.git
 ```
 
 
