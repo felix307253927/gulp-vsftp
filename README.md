@@ -66,7 +66,7 @@ If you intend to use root login, use the value '@root'.
 
 Type: `Boolean`  
 Default: `false`
-If you set true, remote files will delete.
+If you set true, remote files will be delete.
 
 #### options.remotePath
 
