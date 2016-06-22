@@ -2,7 +2,7 @@
 
 > Upload files via SSH
 
-Useful for uploading and deploying things via gulp-vsftp.  
+this project is base on gulp-sftp 
 
 <!--[![NPM](https://nodei.co/npm/gulp-vsftp.png?downloads=true&stars=true)](https://nodei.co/npm/gulp-vsftp/)-->
 
