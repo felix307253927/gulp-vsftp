@@ -1,73 +1,12 @@
 {
-  "_args": [
-    [
-      "gulp-sftp",
-      "/home/felix/workspace/workspace/ustudy"
-    ]
-  ],
-  "_from": "gulp-sftp@*",
-  "_id": "gulp-sftp@0.1.5",
-  "_inCache": true,
-  "_installable": true,
-  "_location": "/gulp-sftp",
-  "_nodeVersion": "0.12.4",
-  "_npmUser": {
-    "email": "gtg092x@gmail.com",
-    "name": "gtg092x"
-  },
-  "_npmVersion": "2.10.1",
-  "_phantomChildren": {
-    "core-util-is": "1.0.2",
-    "inherits": "2.0.1",
-    "object-keys": "0.4.0",
-    "string_decoder": "0.10.31"
-  },
-  "_requested": {
-    "name": "gulp-sftp",
-    "raw": "gulp-sftp",
-    "rawSpec": "",
-    "scope": null,
-    "spec": "*",
-    "type": "range"
-  },
-  "_requiredBy": [
-    "#DEV:/"
-  ],
-  "_resolved": "https://registry.npmjs.org/gulp-sftp/-/gulp-sftp-0.1.5.tgz",
-  "_shasum": "57afec28b23823465d9ac44deba2f02de8dc5c70",
-  "_shrinkwrap": null,
-  "_spec": "gulp-sftp",
-  "_where": "/home/felix/workspace/workspace/ustudy",
   "author": {
-    "email": "mdrake@mediadrake.com",
-    "name": "Matthew Drake",
-    "url": "http://mediadrake.com"
+    "email": "307253927@qq.com",
+    "name": "felix",
+    "url": "http://www.wangyn.com"
   },
   "bugs": {
-    "url": "https://github.com/gtg092x/gulp-sftp/issues"
+    "url": "https://github.com/felix307253927/gulp-vsftp/issues"
   },
-  "contributors": [
-    {
-      "name": "Benjamin P. Jung",
-      "email": "headcr4sh@gmail.com"
-    },
-    {
-      "name": "Carson Britt",
-      "email": "carson28@gmail.com"
-    },
-    {
-      "name": "Matthew Drake",
-      "email": "mdrake@mediadrake.com"
-    },
-    {
-      "name": "Valan Brown",
-      "email": "github@valanbrown.com"
-    },
-    {
-      "name": "Sorin Guga",
-      "email": "sorin.guga@gmail.com"
-    }
-  ],
   "dependencies": {
     "async": "~0.9.0",
     "gulp-util": "~3.0.0",
@@ -79,45 +18,37 @@
   "description": "Upload files via SSH",
   "devDependencies": {},
   "directories": {},
-  "dist": {
-    "shasum": "57afec28b23823465d9ac44deba2f02de8dc5c70",
-    "tarball": "https://registry.npmjs.org/gulp-sftp/-/gulp-sftp-0.1.5.tgz"
-  },
   "engines": {
     "node": ">=0.10.0"
   },
   "files": [
     "index.js"
   ],
-  "gitHead": "f804e0fb779c0bf47a6aa1bcd1559f5051dbffa0",
-  "homepage": "https://github.com/gtg092x/gulp-sftp/",
+  "homepage": "https://github.com/felix307253927/gulp-vsftp/",
   "keywords": [
-    "client",
-    "deploy",
-    "deployment",
     "file",
     "files",
     "gulpplugin",
     "protocol",
     "server",
-    "sftp",
+    "vsftp",
     "transfer",
     "upload"
   ],
   "license": "MIT",
   "maintainers": [
     {
-      "name": "gtg092x",
-      "email": "gtg092x@gmail.com"
+      "name": "felix",
+      "email": "307253927@qq.com"
     }
   ],
-  "name": "gulp-sftp",
+  "name": "gulp-vsftp",
   "optionalDependencies": {},
   "readme": "ERROR: No README data found!",
   "repository": {
     "type": "git",
-    "url": "git://github.com/gtg092x/gulp-sftp.git"
+    "url": "git://github.com/felix307253927/gulp-vsftp.git"
   },
   "scripts": {},
-  "version": "0.1.5"
+  "version": "0.6.21"
 }

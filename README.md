@@ -2,7 +2,7 @@
 
 > Upload files via SSH
 
-Useful for uploading and deploying things via vsftp. Right now this plugin just uploads everything. Caching and hash comparison are two TODO items.  
+Useful for uploading and deploying things via gulp-vsftp.  
 
 [![NPM](https://nodei.co/npm/gulp-vsftp.png?downloads=true&stars=true)](https://nodei.co/npm/gulp-vsftp/)
 
@@ -25,6 +25,7 @@ gulp.task('default', function () {
 			host: 'website.com',
 			user: 'root',
 			pass: 'root',
+			cleanFiles: true,
 			remotePath: '/home/'
 		}));
 });
@@ -60,6 +61,12 @@ If this option is not set, gulp-vsftp assumes the user is using private key auth
 `~/.ssh/id_dsa` and `/.ssh/id_rsa`
 
 If you intend to use root login, use the value '@root'.
+
+#### options.cleanFiles
+
+Type: `Boolean`  
+Default: `false`
+If you set true, remote files will delete.
 
 #### options.remotePath
 
