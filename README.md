@@ -184,10 +184,6 @@ gulp.task('default', function () {
 }
 ```
 
-##Known Issues
-
-Some awesome work via @mscdex addressed this issue. Please make sure you have the latest version or greater of gulp-vsftp (0.6.21) and the latest version or greater of ssh2 (0.3.4) and you should not see abrupt disconnects with large files.
-
 ## License
 
 [MIT](http://opensource.org/licenses/MIT)
