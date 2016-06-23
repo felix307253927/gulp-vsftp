@@ -2,7 +2,7 @@
 
 > Upload files via SSH
 
-this project is base on gulp-sftp 
+
 
 <!--[![NPM](https://nodei.co/npm/gulp-vsftp.png?downloads=true&stars=true)](https://nodei.co/npm/gulp-vsftp/)-->
 
