@@ -68,6 +68,12 @@ Type: `Boolean`
 Default: `false`
 If you set true, remote files will be delete.
 
+#### options.ignoreCleanPath
+
+Type: `String`  
+Default: ``
+If options.cleanFiles is true and you set ignoreCleanPath ,this path will not delete.
+
 #### options.remotePath
 
 Type: `String`  
