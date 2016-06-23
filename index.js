@@ -116,6 +116,7 @@ module.exports = function (options) {
             if (homePath) {
                 var exe = 'rm -rf ' + homePath + '**';
                 if(options.ignorePath){
+                    options.ignorePath = options.ignorePath.replace(/\/$/, '');
                     exe = 'find '+homePath+' -path "'+homePath + options.ignorePath+'" -prune -o -type f -exec rm -rf {} \\;'
                 }
                 con.exec(exe, function (err) {
