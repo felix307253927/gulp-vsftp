@@ -26,7 +26,8 @@ gulp.task('default', function () {
 			user: 'root',
 			pass: 'root',
 			cleanFiles: true,
-			remotePath: '/home/'
+			remotePath: '/home/',
+			ignoreCleanPath: 'zip' //  /home/zip  will not be cleared
 		}));
 });
 ```
