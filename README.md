@@ -72,14 +72,14 @@ If you set true, remote files will be delete.
 
 Type: `String`  
 Default: ``
-If options.cleanFiles is true and you set ignoreCleanPath ,this path will not delete.
+If options.cleanFiles is true and you set ignoreCleanPath(can't endwith `/`) ,this path will not delete.
 
 #### options.remotePath
 
 Type: `String`  
 Default: `'/'`
 
-The remote path to upload to. If this path does not yet exist, it will be created, as well as the child directories that house your files.
+The remote path to upload to(must endwith `/`). If this path does not yet exist, it will be created, as well as the child directories that house your files.
 
 #### options.remotePlatform
 
