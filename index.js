@@ -113,7 +113,7 @@ module.exports = function (options) {
                     });
                 });
             };
-            if (homePath) {
+            if (homePath && remotePlatform=='unix') {
                 var exe = 'rm -rf ' + homePath + '**';
                 if(options.ignorePath){
                     options.ignorePath = options.ignorePath.replace(/\/$/, '');
