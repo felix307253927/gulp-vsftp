@@ -1,325 +1,272 @@
+/**
+ * @license Created by felix on 15-5-23.
+ * @email   307253927@qq.com
+ */
 'use strict';
 var path = require('path');
 var fs = require('fs');
 var gutil = require('gulp-util');
 var util = require('util');
 var through = require('through2');
-var Connection = require('ssh2');
+var SSH2 = require('ssh2');
 var async = require('async');
 var parents = require('parents');
-var assign = require('object-assign');
 
-var normalizePath = function(path){
-    return path.replace(/\\/g, '/');
+var normalizePath = function (path) {
+  return path.replace(/\\/g, '/');
 };
 
 module.exports = function (options) {
-    options = assign({}, options);// credit sindresorhus
+  if (!options.host) {
+    throw new gutil.PluginError('gulp-vsftp', '`host` required.');
+  }
+  options.user = options.user || 'root';
+  var fileCount = 0;
+  var remotePath = options.remotePath || '/';
+  var homePath = options.cleanFiles ? remotePath : '';
+  var remotePlatform = options.remotePlatform || 'unix';
 
-    if (options.host === undefined) {
-        throw new gutil.PluginError('gulp-vsftp', '`host` required.');
+  var authFilePath = options.authFile || '.ftppass';
+  var authFile = path.join('./', authFilePath);
+  if (options.auth && fs.existsSync(authFile)) {
+    var auth = JSON.parse(fs.readFileSync(authFile, 'utf8'))[options.auth];
+    if (!auth)
+      this.emit('error', new gutil.PluginError('gulp-vsftp', 'Could not find authkey in .ftppass'));
+    if (typeof auth == "string" && auth.indexOf(":") != -1) {
+      var authparts = auth.split(":");
+      auth = {user: authparts[0], pass: authparts[1]};
+    }
+    for (var attr in auth) {
+      options[attr] = auth[attr];
+    }
+  }
+
+  var key = options.key || null;
+  if (key && typeof key == "string") {
+    key = {location: key};
+  }
+
+  if (!key && (options.passphrase || options.keyContents || !options.pass)) {
+    key = {};
+  }
+
+  if (key) {
+    key.contents = key.contents || options.keyContents;
+    key.passphrase = key.passphrase || options.passphrase;
+    key.location = key.location || ["~/.ssh/id_rsa", "/.ssh/id_rsa", "~/.ssh/id_dsa", "/.ssh/id_dsa"];
+
+    if (!util.isArray(key.location)) {
+      key.location = [key.location];
     }
 
-    var fileCount = 0;
-    var remotePath = options.remotePath || '/';
-    var homePath = options.cleanFiles? remotePath: '';
-    var remotePlatform = options.remotePlatform || options.platform || 'unix';
-
-    options.authKey = options.authKey||options.auth;
-    var authFilePath = options.authFile || '.ftppass';
-    var authFile=path.join('./',authFilePath);
-    if(options.authKey && fs.existsSync(authFile)){
-        var auth = JSON.parse(fs.readFileSync(authFile,'utf8'))[options.authKey];
-        if(!auth)
-            this.emit('error', new gutil.PluginError('gulp-vsftp', 'Could not find authkey in .ftppass'));
-        if(typeof auth == "string" && auth.indexOf(":")!=-1){
-            var authparts = auth.split(":");
-            auth = {user:authparts[0],pass:authparts[1]};
+    if (key.location) {
+      var home = process.env.HOME || process.env.USERPROFILE;
+      for (var i = 0; i < key.location.length; i++) {
+        if (key.location[i].substr(0, 2) === '~/') {
+          key.location[i] = path.resolve(home, key.location[i].replace(/^~\//, ""));
         }
-        for (var attr in auth) { options[attr] = auth[attr]; }
+      }
+      for (var i = 0, keyPath; keyPath = key.location[i++];) {
+        if (fs.existsSync(keyPath)) {
+          key.contents = fs.readFileSync(keyPath);
+          break;
+        }
+      }
+    } else if (!key.contents) {
+      this.emit('error', new gutil.PluginError('gulp-vsftp', 'Cannot find RSA key, searched: ' + key.location.join(', ')));
+    }
+  }
+
+  var logFiles = !!options.logFiles;
+  var mkDirCache = {};
+  var finished = false;
+  var vsftpCache = null;       //sftp connection cache
+  var con = null;              //ssh connection
+
+  var pool = function (remotePath, uploader) {
+    if (vsftpCache) {
+      return uploader(vsftpCache);
+    }
+    if (options.pass) {
+      gutil.log('Authenticating with password.');
+    } else if (key) {
+      gutil.log('Authenticating with private key.');
     }
 
-    //option aliases
-    options.password = options.password||options.pass;
-    options.username = options.username||options.user||'root';
-
-    /*
-     * Lots of ways to present key info
-     */
-    var key = options.key || options.keyLocation || null;
-    if(key&&typeof key == "string")
-        key = {location:key};
-
-    //check for other options that imply a key or if there is no password
-    if(!key && (options.passphrase||options.keyContents||!options.password)){
-        key = {};
-    }
-
-    if(key){
-
-        //aliases
-        key.contents=key.contents||options.keyContents;
-        key.passphrase=key.passphrase||options.passphrase;
-
-        //defaults
-        key.location=key.location||["~/.ssh/id_rsa","/.ssh/id_rsa","~/.ssh/id_dsa","/.ssh/id_dsa"];
-
-        //type normalization
-        if(!util.isArray(key.location))
-            key.location=[key.location];
-
-        //resolve all home paths
-        if(key.location){
-            var home = process.env.HOME||process.env.USERPROFILE;
-            for(var i=0;i<key.location.length;i++)
-                if (key.location[i].substr(0,2) === '~/')
-                    key.location[i] = path.resolve(home,key.location[i].replace(/^~\//,""));
-
-
-            for(var i=0,keyPath;keyPath=key.location[i++];){
-
-
-                if(fs.existsSync(keyPath)){
-                    key.contents = fs.readFileSync(keyPath);
-                    break;
-                }
+    con = new SSH2();
+    var self = this;
+    con.on('ready', function () {
+      gutil.log(gutil.colors.green('connection ready!'));
+      var ftp = function () {
+        con.sftp(function (err, sftp) {
+          if (err) {
+            throw err;
+          }
+          this.emit('error', new gutil.PluginError('gulp-vsftp', "ftp is ready"));
+          vsftpCache = sftp;
+          uploader(vsftpCache);
+          sftp.on('end', function () {
+            gutil.log('VSFTP :: VSFTP session closed');
+            vsftpCache = null;
+            if (!finished) {
+              this.emit('error', new gutil.PluginError('gulp-vsftp', "VSFTP abrupt closure"));
             }
-        }else if(!key.contents){
-            this.emit('error', new gutil.PluginError('gulp-vsftp', 'Cannot find RSA key, searched: '+key.location.join(', ')));
-        }
-
-
-
-    }
-    /*
-     * End Key normalization, key should now be of form:
-     * {location:Array,passphrase:String,contents:String}
-     * or null
-     */
-
-
-
-
-    var logFiles = options.logFiles === false ? false : true;
-
-    var mkDirCache = {};
-    var finished=false;
-    var sftpCache = null;       //sftp connection cache
-    var connectionCache = null; //ssh connection cache
-
-    var pool = function(remotePath, uploader){ // method to get cache or create connection
-
-
-        if(sftpCache){
-            return  uploader(sftpCache);
-        }
-        if(options.password){
-            gutil.log('Authenticating with password.');
-        }else if(key){
-            gutil.log('Authenticating with private key.');
-        }
-
-        var c = new Connection();
-        connectionCache = c;
-        c.on('ready', function() {
-            gutil.log(gutil.colors.green('connection ready!'));
-            var ftp = function () {
-                c.sftp(function(err, sftp) {
-                    if (err)
-                        throw err;
-        
-                    sftp.on('end', function() {
-                        gutil.log('VSFTP :: VSFTP session closed');
-                        sftpCache=null;
-                        if(!finished)
-                            this.emit('error', new gutil.PluginError('gulp-vsftp', "VSFTP abrupt closure"));
-                    });
-                    sftpCache = sftp;
-                    uploader(sftpCache);
-                });  
-            };
-            if(homePath){
-                c.exec('rm -rf ' + homePath + '**', function (err) {
-                    if(err){
-                        gutil.log(gutil.colors.red("clean " + homePath + " error: " + err));
-                        return c.end();
-                    }
-                    gutil.log(gutil.colors.green(homePath + '** clean success!'));
-                    ftp();
-                }) 
-            } else {
-                ftp()
-            }
+          });
         });
-
-        var self = this;
-        c.on('error', function(err) {
-            self.emit('error', new gutil.PluginError('gulp-vsftp', err));
-        });
-        c.on('end', function() {
-            gutil.log('Connection :: end');
-        });
-        c.on('close', function(had_error) {
-            if(!finished){
-                self.emit('error', new gutil.PluginError('gulp-vsftp', "VSFTP abrupt closure"));
-            }
-            gutil.log('Connection :: close',had_error!==false?"with error":"");
-            if(options.callback) options.callback();
-        });
-
-
-        /*
-         * connection options, may be a key
-         */
-        var connection_options = {
-            host : options.host,
-            port : options.port||22,
-            username : options.username
-        };
-
-        if(options.password){
-            connection_options.password = options.password;
-        }else if(options.agent) {
-            connection_options.agent = options.agent;
-            connection_options.agentForward = options.agentForward || false;
-        }else if(key){
-            connection_options.privateKey = key.contents;
-            connection_options.passphrase = key.passphrase;
+      };
+      if (homePath) {
+        var exe = 'rm -rf ' + homePath + '**';
+        if(options.ignorePath){
+          exe = 'find '+homePath+' -path "'+homePath + options.ignorePath+'" -prune -o -type f -exec rm {} \\;'
         }
-
-        if(options.timeout){
-            connection_options.readyTimeout = options.timeout;
-        }
-
-        c.connect(connection_options);
-
-        /*
-         * end connection options
-         */
-
-    };
-
-    return through.obj(function (file, enc, cb) {
-        if (file.isNull()) {
-            this.push(file);
-            return cb();
-        }
-
-        // have to create a new connection for each file otherwise they conflict, pulled from sindresorhus
-        var finalRemotePath = normalizePath(path.join(remotePath, file.relative));
-
-        //connection pulled from pool
-        pool.call(this, finalRemotePath, function(sftp){
-            /*
-             *  Create Directories
-             */
-
-            //get dir name from file path
-            var dirname=path.dirname(finalRemotePath);
-            //get parents of the target dir
-
-            var fileDirs = parents(dirname)
-                .map(function(d){return d.replace(/^\/~/,"~");})
-                .map(normalizePath);
-
-            if(dirname.search(/^\//) === 0){
-                fileDirs = fileDirs.map(function(dir){
-                    if(dir.search(/^\//) === 0){
-                        return dir;
-                    }
-                    return '/' + dir;
-                });
-            }
-
-            //get filter out dirs that are closer to root than the base remote path
-            //also filter out any dirs made during this gulp session
-            fileDirs = fileDirs.filter(function(d){return d.length>=remotePath.length&&!mkDirCache[d];});
-
-            //while there are dirs to create, create them
-            //https://github.com/caolan/async#whilst - not the most commonly used async control flow
-            async.whilst(function(){
-                return fileDirs && fileDirs.length;
-            },function(next){
-                var d= fileDirs.pop();
-                mkDirCache[d]=true;
-                if(remotePlatform && remotePlatform.toLowerCase().indexOf('win')!==-1) {
-                    d = d.replace('/','\\');
-                }
-                sftp.exists(d, function (e) {
-                    if (!e) {
-                        sftp.mkdir(d, {mode: '0755'}, function(err){
-                            if(err){
-                                gutil.log('VSFTP error: ', gutil.colors.red(err + " " +d));
-                            }else{
-                                gutil.log('VSFTP Created:', gutil.colors.green(d));
-                            }
-                        });
-                    }
-                    next();
-                })
-            },function(){
-
-                var stream = sftp.createWriteStream(finalRemotePath,{//REMOTE PATH
-                    flags: 'w',
-                    encoding: null,
-                    mode: '0666',
-                    autoClose: true
-                });
-
-                var uploadedBytes = 0;
-
-                var highWaterMark = stream.highWaterMark||(16*1000);
-                var size = file.stat.size;
-
-
-                file.pipe(stream); // start upload
-
-                stream.on('drain',function(){
-                    uploadedBytes+=highWaterMark;
-                    var p = Math.round((uploadedBytes/size)*100);
-                    p = Math.min(100,p);
-                    gutil.log('gulp-vsftp:',finalRemotePath,"uploaded",(uploadedBytes/1000)+"kb");
-                });
-
-
-
-
-                stream.on('close', function(err) {
-
-                    if(err)
-                        this.emit('error', new gutil.PluginError('gulp-vsftp', err));
-                    else{
-                        if (logFiles) {
-                            gutil.log('gulp-vsftp:', gutil.colors.green('Uploaded: ') +
-                                file.relative +
-                                gutil.colors.green(' => ') +
-                                finalRemotePath);
-                        }
-
-                        fileCount++;
-                    }
-                    return cb(err);
-                });
-
-            });//async.whilst
-        });
-
-
-
-        this.push(file);
-
-    }, function (cb) {
-        if (fileCount > 0) {
-            gutil.log('gulp-vsftp:', gutil.colors.green(fileCount, fileCount === 1 ? 'file' : 'files', 'uploaded successfully'));
-        } else {
-            gutil.log('gulp-vsftp:', gutil.colors.yellow('No files uploaded'));
-        }
-        finished=true;
-        if(sftpCache)
-            sftpCache.end();
-        if(connectionCache)
-            connectionCache.end();
-
-        cb();
+        con.exec(exe, function (err) {
+          if (err) {
+            gutil.log(gutil.colors.red("clean " + homePath + " error: " + err));
+            return con.end();
+          }
+          gutil.log(gutil.colors.green(homePath + '** clean success!'));
+          ftp();
+        })
+      } else {
+        ftp()
+      }
     });
+    con.on('error', function (err) {
+      self.emit('error', new gutil.PluginError('gulp-vsftp', err));
+    });
+    con.on('end', function () {
+      gutil.log('Connection :: end');
+    });
+    con.on('close', function (had_error) {
+      if (!finished) {
+        self.emit('error', new gutil.PluginError('gulp-vsftp', "VSFTP abrupt closure"));
+      }
+      gutil.log('Connection :: close', had_error !== false ? "with error" : "");
+      if (options.callback) options.callback();
+    });
+
+
+    var conOpt = {
+      host: options.host,
+      port: options.port || 22,
+      username: options.user
+    };
+    if (options.pass) {
+      conOpt.password = options.pass;
+    } else if (options.agent) {
+      conOpt.agent = options.agent;
+      conOpt.agentForward = options.agentForward || false;
+    } else if (key) {
+      conOpt.privateKey = key.contents;
+      conOpt.passphrase = key.passphrase;
+    }
+    if (options.timeout) {
+      conOpt.readyTimeout = options.timeout;
+    }
+    con.connect(conOpt);
+  };
+
+  return through.obj(function (file, enc, cb) {
+    if (file.isNull()) {
+      this.push(file);
+      return cb();
+    }
+    var finalRemotePath = normalizePath(path.join(remotePath, file.relative));
+    pool.call(this, finalRemotePath, function (sftp) {
+      var dirname = path.dirname(finalRemotePath);
+      var fileDirs = parents(dirname)
+        .map(function (d) {
+          return normalizePath(d.replace(/^\/~/, "~"));
+        });
+
+      if (dirname.search(/^\//) === 0) {
+        fileDirs = fileDirs.map(function (dir) {
+          if (dir.search(/^\//) === 0) {
+            return dir;
+          }
+          return '/' + dir;
+        });
+      }
+
+      //get filter out dirs that are closer to root than the base remote path
+      //also filter out any dirs made during this gulp session
+      fileDirs = fileDirs.filter(function (d) {
+        return d.length >= remotePath.length && !mkDirCache[d];
+      });
+
+      //while there are dirs to create, create them
+      //https://github.com/caolan/async#whilst - not the most commonly used async control flow
+      async.whilst(function () {
+        return fileDirs && fileDirs.length;
+      }, function (next) {
+        var d = fileDirs.pop();
+        mkDirCache[d] = true;
+        if (remotePlatform && remotePlatform.toLowerCase().indexOf('win') !== -1) {
+          d = d.replace('/', '\\');
+        }
+        sftp.exists(d, function (err) {
+          if (!err) {
+            sftp.mkdir(d, {mode: '0755'}, function (err) {
+              if (err) {
+                gutil.log('VSFTP error: ', gutil.colors.red(err + " " + d));
+              } else {
+                gutil.log('VSFTP Created:', gutil.colors.green(d));
+              }
+            });
+          }
+          next();
+        })
+      }, function () {
+
+        var stream = sftp.createWriteStream(finalRemotePath, {//REMOTE PATH
+          flags: 'w',
+          encoding: null,
+          mode: '0666',
+          autoClose: true
+        });
+
+        var uploadedBytes = 0;
+        var highWaterMark = stream.highWaterMark || (16 * 1000);
+
+        file.pipe(stream); // start upload
+
+        stream.on('drain', function () {
+          uploadedBytes += highWaterMark;
+          gutil.log('gulp-vsftp:', finalRemotePath, "uploaded", (uploadedBytes / 1000) + "kb");
+        });
+
+        stream.on('close', function (err) {
+          if (err){
+            this.emit('error', new gutil.PluginError('gulp-vsftp', err));
+          }
+          else {
+            if (logFiles) {
+              gutil.log('gulp-vsftp:', gutil.colors.green('Uploaded: ') +
+                file.relative +
+                gutil.colors.green(' => ') +
+                finalRemotePath);
+            }
+            fileCount++;
+          }
+          return cb(err);
+        });
+
+      });
+    });
+    this.push(file);
+  }, function (cb) {
+    if (fileCount > 0) {
+      gutil.log('gulp-vsftp:', gutil.colors.green('files uploaded successfully'));
+    } else {
+      gutil.log('gulp-vsftp:', gutil.colors.yellow('No files uploaded'));
+    }
+    finished = true;
+    if (vsftpCache) {
+      vsftpCache.end();
+    }
+    if (con) {
+      con.end();
+    }
+    cb();
+  });
 };
