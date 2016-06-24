@@ -1,9 +1,5 @@
 {
-  "author": {
-    "email": "307253927@qq.com",
-    "name": "felix",
-    "url": "http://www.wangyn.com"
-  },
+  "author": "felix <307253927@qq.com> (http://www.wangyn.com)",
   "bugs": {
     "url": "https://github.com/felix307253927/gulp-vsftp/issues"
   },
@@ -28,7 +24,6 @@
     "file",
     "files",
     "gulpplugin",
-    "protocol",
     "server",
     "vsftp",
     "transfer",
@@ -36,18 +31,15 @@
   ],
   "license": "MIT",
   "maintainers": [
-    {
-      "name": "felix",
-      "email": "307253927@qq.com"
-    }
+    "felix <307253927@qq.com>"
   ],
   "name": "gulp-vsftp",
   "optionalDependencies": {},
-  "readme": "ERROR: No README data found!",
   "repository": {
     "type": "git",
     "url": "git://github.com/felix307253927/gulp-vsftp.git"
   },
   "scripts": {},
-  "version": "0.6.21"
+  "version": "0.6.23",
+  "main": "index.js"
 }

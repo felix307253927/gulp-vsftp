@@ -4,7 +4,7 @@
 
 
 
-<!--[![NPM](https://nodei.co/npm/gulp-vsftp.png?downloads=true&stars=true)](https://nodei.co/npm/gulp-vsftp/)-->
+[![NPM](https://nodei.co/npm/gulp-vsftp.png?downloads=true&stars=true)](https://nodei.co/npm/gulp-vsftp/)
 
 ## Install
 
