@@ -9,6 +9,7 @@
 ## Install
 
 ```bash
+$ npm install --save-dev gulp-vsftp ro
 $ npm install --save-dev https://github.com/felix307253927/gulp-vsftp.git
 ```
 
