@@ -115,9 +115,9 @@ module.exports = function (options) {
             };
             if (homePath && remotePlatform=='unix') {
                 var exe = 'rm -rf ' + homePath + '**';
-                if(options.ignorePath){
-                    options.ignorePath = options.ignorePath.replace(/\/$/, '');
-                    exe = 'find '+homePath+' -path "'+homePath + options.ignorePath+'" -prune -o -type f -exec rm -rf {} \\;'
+                if(options.ignoreCleanPath){
+                    options.ignoreCleanPath = options.ignoreCleanPath.replace(/\/$/, '');
+                    exe = 'find '+homePath+' -path "'+homePath + options.ignoreCleanPath+'" -prune -o -type f -exec rm -rf {} \\;'
                 }
                 con.exec(exe, function (err) {
                     if (err) {
