@@ -124,8 +124,10 @@ module.exports = function (options) {
                         gutil.log(gutil.colors.red("clean " + homePath + " error: " + err));
                         return con.end();
                     }
-                    gutil.log(gutil.colors.green(homePath + '** clean success!'));
-                    ftp();
+                    setTimeout(function () {
+                        gutil.log(gutil.colors.green(homePath + '** clean success!'));
+                        ftp();
+                    }, 1000)
                 })
             } else {
                 ftp()
